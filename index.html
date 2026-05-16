@@ -1,0 +1,727 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AI & Elections Monitor — Europe</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Tracking upcoming European elections through end-2027 and the AI governance context around them. 46 Council of Europe member states.">
+<style>
+  :root {
+    --bg:        #FAFAF7;
+    --bg-card:   #FFFFFF;
+    --bg-soft:   #F2EFE8;
+    --ink:       #1A1F2E;
+    --ink-soft:  #4B5563;
+    --ink-mute:  #6B7280;
+    --line:      #E5E1D8;
+    --line-soft: #EFECE4;
+    --navy:      #1F3A5F;
+    --accent:    #8B2D2D;
+    --good:      #2E7D5B;
+    --warn:      #C58A1F;
+    --bad:       #B33A3A;
+    --serif: Georgia, 'Source Serif Pro', Charter, Cambria, 'Times New Roman', serif;
+    --sans:  -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); }
+  body { font-family: var(--sans); font-size: 15px; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+  a { color: var(--navy); }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 48px 24px 96px; }
+  header.top { border-bottom: 1px solid var(--line); padding-bottom: 32px; margin-bottom: 40px; }
+  header.top .eyebrow { font-family: var(--sans); font-size: 12px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--accent); font-weight: 600; margin-bottom: 14px; }
+  header.top h1 { font-family: var(--serif); font-weight: 400; font-size: 44px; line-height: 1.1; margin: 0 0 14px; letter-spacing: -0.01em; }
+  header.top .sub { font-family: var(--serif); font-style: italic; font-size: 19px; color: var(--ink-soft); max-width: 720px; margin: 0 0 18px; }
+  header.top .meta { font-size: 13px; color: var(--ink-mute); }
+  header.top .meta strong { color: var(--ink); font-weight: 600; }
+
+  /* KPI strip */
+  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin: 0 0 56px; }
+  .kpi { background: var(--bg-card); border: 1px solid var(--line); padding: 18px 20px; border-radius: 4px; }
+  .kpi .num { font-family: var(--serif); font-size: 34px; line-height: 1; color: var(--navy); margin-bottom: 6px; }
+  .kpi .label { font-size: 12px; color: var(--ink-mute); text-transform: uppercase; letter-spacing: 0.08em; }
+
+  section { margin: 0 0 64px; }
+  section h2 { font-family: var(--serif); font-weight: 400; font-size: 28px; margin: 0 0 6px; letter-spacing: -0.005em; }
+  section .lede { font-family: var(--serif); font-style: italic; font-size: 16px; color: var(--ink-soft); margin: 0 0 24px; max-width: 720px; }
+
+  /* Filters */
+  .filters { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 24px; align-items: center; }
+  .filters label { font-size: 12px; color: var(--ink-mute); text-transform: uppercase; letter-spacing: 0.06em; }
+  .filters select, .filters input {
+    font-family: var(--sans); font-size: 14px; padding: 7px 10px;
+    border: 1px solid var(--line); background: var(--bg-card); color: var(--ink);
+    border-radius: 3px;
+  }
+  .filters .clear { background: none; border: none; color: var(--accent); cursor: pointer; font-size: 13px; padding: 4px 8px; }
+  .filters .clear:hover { text-decoration: underline; }
+  .active-filter-banner { background: var(--bg-soft); padding: 8px 12px; font-size: 13px; color: var(--ink-soft); margin-bottom: 16px; border-radius: 3px; display: none; }
+  .active-filter-banner.visible { display: block; }
+
+  /* Timeline */
+  .month-group { margin-bottom: 28px; }
+  .month-label { font-family: var(--serif); font-style: italic; font-size: 18px; color: var(--navy); margin: 0 0 12px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+  .election-row {
+    display: grid; grid-template-columns: 90px 1fr 110px 110px;
+    gap: 16px; padding: 12px 4px; border-bottom: 1px solid var(--line-soft);
+    cursor: pointer; transition: background 0.12s;
+  }
+  .election-row:hover { background: var(--bg-soft); }
+  .election-row.highlight { background: #FFF8E7; }
+  .election-row .date { font-family: var(--serif); font-size: 16px; color: var(--navy); }
+  .election-row .title { color: var(--ink); }
+  .election-row .title strong { font-weight: 600; }
+  .election-row .title .context { display: block; color: var(--ink-mute); font-size: 13px; margin-top: 2px; }
+  .election-row .level, .election-row .status { font-size: 12px; color: var(--ink-mute); align-self: center; }
+  .pill { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; }
+  .pill.national    { background: #E6EEF7; color: var(--navy); }
+  .pill.subnational { background: #F0E6E6; color: var(--accent); }
+  .pill.scheduled   { background: #E2EFDA; color: var(--good); }
+  .pill.expected    { background: #FFF2CC; color: var(--warn); }
+  .pill.postponed,
+  .pill.past        { background: #FCE4D6; color: var(--bad); }
+  .pill.notwindow   { background: #EEEEEE; color: var(--ink-mute); }
+
+  /* Map */
+  .map-area { display: grid; grid-template-columns: 1fr 320px; gap: 32px; align-items: start; }
+  #europe-map { width: 100%; height: 580px; }
+  #europe-map .country { stroke: #fff; stroke-width: 0.6; cursor: pointer; transition: opacity 0.15s; }
+  #europe-map .country:hover { stroke: var(--ink); stroke-width: 1.4; }
+  #europe-map .country.selected { stroke: var(--ink); stroke-width: 1.8; }
+  #europe-map .country.outside { fill: #EDE9DF; cursor: default; }
+  #europe-map .country.outside:hover { stroke: #fff; stroke-width: 0.6; }
+  .map-legend { margin-top: 12px; font-size: 12px; color: var(--ink-mute); display: flex; align-items: center; gap: 12px; }
+  .legend-scale { display: flex; height: 10px; width: 200px; }
+  .legend-scale span { flex: 1; }
+  .country-panel {
+    background: var(--bg-card); border: 1px solid var(--line); padding: 22px;
+    border-radius: 4px; font-size: 14px;
+  }
+  .country-panel.empty { color: var(--ink-mute); font-style: italic; }
+  .country-panel h3 { font-family: var(--serif); font-weight: 400; font-size: 22px; margin: 0 0 4px; }
+  .country-panel .fh-line { font-size: 13px; color: var(--ink-mute); margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--line-soft); }
+  .country-panel .fh-line .fh-status { font-weight: 600; color: var(--ink); }
+  .country-panel h4 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-mute); margin: 14px 0 6px; font-weight: 600; }
+  .country-panel .score-big { font-family: var(--serif); font-size: 30px; color: var(--navy); display: inline-block; margin-right: 8px; }
+  .country-panel .tier { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+  .tier.Strong    { background: #E2EFDA; color: var(--good); }
+  .tier.Moderate  { background: #FFF2CC; color: var(--warn); }
+  .tier.Weak      { background: #FCE4D6; color: var(--bad); }
+  .tier.VeryWeak  { background: #F5D5D5; color: var(--bad); }
+  .tier.Unknown   { background: #EEEEEE; color: var(--ink-mute); }
+  .country-panel .qrow { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px dotted var(--line-soft); font-size: 13px; }
+  .country-panel .qrow:last-child { border-bottom: none; }
+  .country-panel .qrow .q { color: var(--ink-soft); }
+  .country-panel .qrow .a { font-weight: 600; }
+  .country-panel .qrow .a.Yes      { color: var(--good); }
+  .country-panel .qrow .a.Partial  { color: var(--warn); }
+  .country-panel .qrow .a.No       { color: var(--bad); }
+  .country-panel .qrow .a.Unknown  { color: var(--ink-mute); }
+
+  /* Table */
+  table.ranking { width: 100%; border-collapse: collapse; font-size: 14px; }
+  table.ranking th { text-align: left; font-weight: 600; color: var(--ink-mute); font-size: 12px;
+    text-transform: uppercase; letter-spacing: 0.06em; padding: 10px 8px; border-bottom: 2px solid var(--line);
+    cursor: pointer; user-select: none; }
+  table.ranking th:hover { color: var(--ink); }
+  table.ranking th.sortcol::after { content: " ↓"; color: var(--accent); }
+  table.ranking th.sortcol.asc::after { content: " ↑"; }
+  table.ranking td { padding: 10px 8px; border-bottom: 1px solid var(--line-soft); }
+  table.ranking tr { cursor: pointer; transition: background 0.12s; }
+  table.ranking tr:hover { background: var(--bg-soft); }
+  table.ranking tr.highlight { background: #FFF8E7; }
+  table.ranking td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  table.ranking td.country { font-weight: 500; }
+  .fh-pill { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+  .fh-pill.Free       { background: #E2EFDA; color: var(--good); }
+  .fh-pill.PartlyFree { background: #FFF2CC; color: var(--warn); }
+  .fh-pill.NotFree    { background: #FCE4D6; color: var(--bad); }
+  .score-bar { display: inline-block; width: 80px; height: 8px; background: var(--line-soft); border-radius: 4px; overflow: hidden; vertical-align: middle; margin-right: 6px; }
+  .score-bar .fill { height: 100%; background: var(--navy); }
+
+  /* Tooltip */
+  .tooltip { position: absolute; background: var(--ink); color: white; padding: 8px 10px; border-radius: 3px; font-size: 12px; pointer-events: none; opacity: 0; transition: opacity 0.1s; max-width: 240px; z-index: 10; }
+  .tooltip strong { display: block; font-size: 13px; margin-bottom: 2px; }
+  .tooltip .meta { font-size: 11px; opacity: 0.8; }
+
+  footer { border-top: 1px solid var(--line); padding-top: 28px; margin-top: 64px; font-size: 13px; color: var(--ink-mute); }
+  footer h3 { font-family: var(--serif); font-weight: 400; font-size: 18px; color: var(--ink); margin: 0 0 8px; }
+  footer p { max-width: 720px; }
+  footer a { color: var(--navy); }
+  details summary { cursor: pointer; color: var(--navy); font-weight: 600; margin: 12px 0 8px; }
+  details ul { margin: 6px 0 12px 18px; }
+  details li { margin-bottom: 4px; }
+
+  @media (max-width: 900px) {
+    .kpis { grid-template-columns: repeat(2, 1fr); }
+    .map-area { grid-template-columns: 1fr; }
+    .election-row { grid-template-columns: 80px 1fr; }
+    .election-row .level, .election-row .status { grid-column: 2; }
+    header.top h1 { font-size: 32px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <div class="eyebrow">A research preview</div>
+  <h1>AI &amp; Elections Monitor — Europe</h1>
+  <p class="sub">Tracking upcoming elections in the 46 Council of Europe member states and the AI-governance context shaping them.</p>
+  <p class="meta">Last updated <strong>16 May 2026</strong> · Coverage through <strong>31 December 2027</strong> · v1.1</p>
+</header>
+
+<section class="kpis">
+  <div class="kpi"><div class="num" id="kpi-elections">—</div><div class="label">Upcoming elections logged</div></div>
+  <div class="kpi"><div class="num" id="kpi-countries">—</div><div class="label">Countries with elections</div></div>
+  <div class="kpi"><div class="num" id="kpi-free">—</div><div class="label">Rated "Free" by Freedom House</div></div>
+  <div class="kpi"><div class="num" id="kpi-strong">—</div><div class="label">"Strong" readiness countries</div></div>
+</section>
+
+<section id="timeline-section">
+  <h2>Upcoming elections</h2>
+  <p class="lede">From today through end of 2027, grouped by month. Click any election to filter the rest of the dashboard to that country.</p>
+  <div class="filters">
+    <label>Country</label>
+    <select id="filter-country"><option value="">All countries</option></select>
+    <label>Level</label>
+    <select id="filter-level">
+      <option value="">All levels</option>
+      <option value="National">National</option>
+      <option value="Subnational">Subnational</option>
+    </select>
+    <label>Status</label>
+    <select id="filter-status">
+      <option value="">All</option>
+      <option value="Scheduled">Scheduled</option>
+      <option value="Expected (by date)">Expected by</option>
+    </select>
+    <button class="clear" id="clear-filters">Clear filters</button>
+  </div>
+  <div class="active-filter-banner" id="filter-banner"></div>
+  <div id="timeline"></div>
+</section>
+
+<section id="map-section">
+  <h2>Readiness across Europe</h2>
+  <p class="lede">Countries colored by their AI-and-elections readiness score (0–10). Hover or click for detail.</p>
+  <div class="map-area">
+    <div>
+      <svg id="europe-map" viewBox="0 0 760 580"></svg>
+      <div class="map-legend">
+        <span>Lower readiness</span>
+        <div class="legend-scale" id="legend-scale"></div>
+        <span>Higher</span>
+        <span style="margin-left: 18px;">Grey = outside scope</span>
+      </div>
+    </div>
+    <div class="country-panel empty" id="country-panel">
+      <p>Click a country on the map or a row in the table to see its profile here.</p>
+    </div>
+  </div>
+</section>
+
+<section id="ranking-section">
+  <h2>Readiness ranking</h2>
+  <p class="lede">All 46 countries, sortable. Score is the sum of five questions on election-authority AI guidance, media literacy, fact-checking, platform engagement, and transparency mechanisms.</p>
+  <table class="ranking" id="ranking-table">
+    <thead>
+      <tr>
+        <th data-sort="name">Country</th>
+        <th data-sort="fh_score">Freedom House</th>
+        <th data-sort="score" class="sortcol">Readiness</th>
+        <th data-sort="tier">Tier</th>
+        <th data-sort="elections">Upcoming elections</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</section>
+
+<footer>
+  <h3>About this monitor</h3>
+  <p>A working dataset compiled from public sources (Freedom House, Europe Elects, IFES Election Guide, International IDEA, OSCE/ODIHR, EU AI Act tracker, CETaS at the Alan Turing Institute, and national election authorities). v1.1, 16 May 2026. The underlying spreadsheet is the source of truth and is updated periodically.</p>
+  <details>
+    <summary>Method &amp; definitions</summary>
+    <p><strong>Scope.</strong> 46 member states of the Council of Europe (Russia expelled 2022). Elections from 16 May 2026 through 31 December 2027. Both national and identifiable subnational/regional contests.</p>
+    <p><strong>Readiness questions.</strong> Each scored Yes = 2, Partial = 1, No = 0, Unknown = 0. Maximum 10.</p>
+    <ul>
+      <li><strong>Election authority AI guidance?</strong> Has the EMB issued written rules or formal guidance on AI-generated content and deepfakes?</li>
+      <li><strong>Media literacy mechanisms?</strong> Government-supported, sustained programmes building citizens' ability to identify AI-generated content.</li>
+      <li><strong>Independent fact-checking present?</strong> Active, independent organisations (ideally IFCN signatories) operating at scale.</li>
+      <li><strong>Platform engagement institutionalized?</strong> Formal, ongoing channel between EMB/government and major platforms — not ad-hoc.</li>
+      <li><strong>Transparency mechanisms?</strong> Enforceable rules on political-ad disclosure, AI-content labelling, and source disclosure (EU AI Act Art. 50, DSA, TTPA, or national equivalents).</li>
+    </ul>
+    <p><strong>Tiers.</strong> Strong (8–10), Moderate (5–7), Weak (2–4), Very weak (0–1).</p>
+    <p><strong>Freedom House.</strong> Status and 0–100 score from <em>Freedom in the World 2026</em>, released March 2026, covering events of 2025.</p>
+    <p><strong>Caveats.</strong> Many entries are best-effort summaries from public sources, not vetted legal opinion. Treat as a starting point. Subnational coverage is selective.</p>
+  </details>
+  <p style="margin-top: 16px;">© Genevieve Shea · <a href="https://genevieveshea.com">genevieveshea.com</a></p>
+</footer>
+
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
+<script>
+// ====================================================================
+// DATA
+// ====================================================================
+
+// Country data keyed by name (ISO 3166-1 numeric used for map matching)
+const COUNTRIES = [
+  { name:"Albania",                 iso_num:"008", fh_status:"Partly Free", fh_score:69, fh_trend:"Improved",   q:["No","Partial","Partial","No","Partial"], notes:"" },
+  { name:"Andorra",                 iso_num:"020", fh_status:"Free",         fh_score:93, fh_trend:"No change", q:["Unknown","Unknown","Partial","No","Unknown"], notes:"Small electorate; relies on Catalan/Spanish/French ecosystem" },
+  { name:"Armenia",                 iso_num:"051", fh_status:"Partly Free", fh_score:54, fh_trend:"No change", q:["Partial","Partial","Partial","No","Partial"], notes:"IFES-supported reforms in progress" },
+  { name:"Austria",                 iso_num:"040", fh_status:"Free",         fh_score:94, fh_trend:"Improved",   q:["Partial","Yes","Yes","Partial","Partial"], notes:"AI Act application underway" },
+  { name:"Azerbaijan",              iso_num:"031", fh_status:"Not Free",     fh_score:6,  fh_trend:"Declined",   q:["No","No","No","No","No"], notes:"Authoritarian baseline" },
+  { name:"Belgium",                 iso_num:"056", fh_status:"Free",         fh_score:95, fh_trend:"Declined",   q:["Partial","Yes","Yes","Yes","Yes"], notes:"DSA Digital Services Coordinator nominated" },
+  { name:"Bosnia and Herzegovina",  iso_num:"070", fh_status:"Partly Free", fh_score:54, fh_trend:"Improved",   q:["No","Partial","Partial","No","No"], notes:"RS-FBiH media split" },
+  { name:"Bulgaria",                iso_num:"100", fh_status:"Free",         fh_score:74, fh_trend:"Declined",   q:["Partial","Partial","Partial","Partial","Partial"], notes:"" },
+  { name:"Croatia",                 iso_num:"191", fh_status:"Free",         fh_score:82, fh_trend:"No change", q:["Partial","Partial","Partial","Partial","Partial"], notes:"" },
+  { name:"Cyprus",                  iso_num:"196", fh_status:"Free",         fh_score:90, fh_trend:"Declined",   q:["Partial","Partial","Partial","Partial","Partial"], notes:"De facto division complicates assessment" },
+  { name:"Czech Republic",          iso_num:"203", fh_status:"Free",         fh_score:95, fh_trend:"No change", q:["Partial","Yes","Yes","Partial","Yes"], notes:"Strong civil-society fact-check ecosystem" },
+  { name:"Denmark",                 iso_num:"208", fh_status:"Free",         fh_score:97, fh_trend:"No change", q:["Yes","Yes","Yes","Yes","Yes"], notes:"Likeness bill pending" },
+  { name:"Estonia",                 iso_num:"233", fh_status:"Free",         fh_score:96, fh_trend:"No change", q:["Partial","Yes","Yes","Yes","Yes"], notes:"Digital state; Russian-language gap" },
+  { name:"Finland",                 iso_num:"246", fh_status:"Free",         fh_score:100,fh_trend:"No change", q:["Yes","Yes","Yes","Yes","Yes"], notes:"Supo + Justice Ministry coordination" },
+  { name:"France",                  iso_num:"250", fh_status:"Free",         fh_score:89, fh_trend:"No change", q:["Yes","Yes","Yes","Yes","Yes"], notes:"ARCOM + CNIL strong" },
+  { name:"Georgia",                 iso_num:"268", fh_status:"Partly Free", fh_score:51, fh_trend:"Declined",   q:["No","Partial","Partial","No","No"], notes:"Election credibility disputed" },
+  { name:"Germany",                 iso_num:"276", fh_status:"Free",         fh_score:95, fh_trend:"No change", q:["Yes","Yes","Yes","Yes","Yes"], notes:"BMI 2025 AI/election guidance issued" },
+  { name:"Greece",                  iso_num:"300", fh_status:"Free",         fh_score:85, fh_trend:"No change", q:["Partial","Partial","Partial","Partial","Partial"], notes:"" },
+  { name:"Hungary",                 iso_num:"348", fh_status:"Partly Free", fh_score:65, fh_trend:"No change", q:["No","Partial","Partial","No","No"], notes:"NMHH politicization; civil-society pressure" },
+  { name:"Iceland",                 iso_num:"352", fh_status:"Free",         fh_score:95, fh_trend:"No change", q:["Partial","Yes","Yes","Partial","Partial"], notes:"Recent deepfake case; small media market" },
+  { name:"Ireland",                 iso_num:"372", fh_status:"Free",         fh_score:98, fh_trend:"Improved",   q:["Yes","Yes","Yes","Yes","Yes"], notes:"An Coimisiún Toghcháin active framework" },
+  { name:"Italy",                   iso_num:"380", fh_status:"Free",         fh_score:87, fh_trend:"Declined",   q:["Yes","Yes","Yes","Yes","Partial"], notes:"National AI Law 2025 + AGCOM guidance" },
+  { name:"Latvia",                  iso_num:"428", fh_status:"Free",         fh_score:89, fh_trend:"No change", q:["Partial","Yes","Yes","Partial","Partial"], notes:"Russian-language minority gap" },
+  { name:"Liechtenstein",           iso_num:"438", fh_status:"Free",         fh_score:90, fh_trend:"No change", q:["Unknown","Yes","Partial","Partial","Partial"], notes:"Small state; relies on German ecosystem" },
+  { name:"Lithuania",               iso_num:"440", fh_status:"Free",         fh_score:90, fh_trend:"Improved",   q:["Partial","Yes","Yes","Partial","Partial"], notes:"" },
+  { name:"Luxembourg",              iso_num:"442", fh_status:"Free",         fh_score:97, fh_trend:"No change", q:["Partial","Yes","Yes","Yes","Yes"], notes:"Multilingual ecosystem" },
+  { name:"Malta",                   iso_num:"470", fh_status:"Free",         fh_score:88, fh_trend:"Improved",   q:["Partial","Partial","Partial","Partial","Partial"], notes:"Maltese-language LLM gap" },
+  { name:"Moldova",                 iso_num:"498", fh_status:"Partly Free", fh_score:60, fh_trend:"No change", q:["Yes","Yes","Partial","Partial","Partial"], notes:"IFES technical assistance" },
+  { name:"Monaco",                  iso_num:"492", fh_status:"Free",         fh_score:82, fh_trend:"No change", q:["Unknown","Partial","Partial","No","Unknown"], notes:"" },
+  { name:"Montenegro",              iso_num:"499", fh_status:"Partly Free", fh_score:68, fh_trend:"Declined",   q:["Partial","Partial","Partial","Partial","Partial"], notes:"" },
+  { name:"Netherlands",             iso_num:"528", fh_status:"Free",         fh_score:97, fh_trend:"No change", q:["Yes","Yes","Yes","Yes","Yes"], notes:"Kiesraad advisory 2024" },
+  { name:"North Macedonia",         iso_num:"807", fh_status:"Partly Free", fh_score:67, fh_trend:"No change", q:["Partial","Partial","Partial","Partial","Partial"], notes:"" },
+  { name:"Norway",                  iso_num:"578", fh_status:"Free",         fh_score:99, fh_trend:"No change", q:["Partial","Yes","Yes","Yes","Yes"], notes:"Medietilsynet" },
+  { name:"Poland",                  iso_num:"616", fh_status:"Free",         fh_score:82, fh_trend:"No change", q:["Partial","Yes","Yes","Partial","Partial"], notes:"Post-Tusk deepfake precedent shapes 2027 prep" },
+  { name:"Portugal",                iso_num:"620", fh_status:"Free",         fh_score:96, fh_trend:"No change", q:["Partial","Yes","Yes","Partial","Partial"], notes:"" },
+  { name:"Romania",                 iso_num:"642", fh_status:"Free",         fh_score:83, fh_trend:"Improved",   q:["Yes","Yes","Yes","Yes","Yes"], notes:"Hard lessons from Georgescu case; emergency rules" },
+  { name:"San Marino",              iso_num:"674", fh_status:"Free",         fh_score:97, fh_trend:"No change", q:["Unknown","Partial","Partial","No","Unknown"], notes:"" },
+  { name:"Serbia",                  iso_num:"688", fh_status:"Partly Free", fh_score:53, fh_trend:"Declined",   q:["No","Partial","Partial","No","No"], notes:"REM politicization" },
+  { name:"Slovakia",                iso_num:"703", fh_status:"Free",         fh_score:88, fh_trend:"Declined",   q:["Partial","Yes","Yes","Partial","Partial"], notes:"Šimečka deepfake precedent" },
+  { name:"Slovenia",                iso_num:"705", fh_status:"Free",         fh_score:97, fh_trend:"Improved",   q:["Partial","Yes","Yes","Partial","Partial"], notes:"" },
+  { name:"Spain",                   iso_num:"724", fh_status:"Free",         fh_score:91, fh_trend:"Improved",   q:["Partial","Yes","Yes","Partial","Yes"], notes:"AESIA active" },
+  { name:"Sweden",                  iso_num:"752", fh_status:"Free",         fh_score:99, fh_trend:"No change", q:["Yes","Yes","Yes","Yes","Yes"], notes:"PSYDEF + Valmyndigheten" },
+  { name:"Switzerland",             iso_num:"756", fh_status:"Free",         fh_score:96, fh_trend:"No change", q:["Partial","Yes","Yes","Partial","Partial"], notes:"Direct-democracy info ecosystem" },
+  { name:"Türkiye",                 iso_num:"792", fh_status:"Not Free",     fh_score:32, fh_trend:"Declined",   q:["No","Partial","No","No","No"], notes:"Authoritarian trajectory" },
+  { name:"Ukraine",                 iso_num:"804", fh_status:"Partly Free", fh_score:51, fh_trend:"No change", q:["Partial","Partial","Yes","Partial","Partial"], notes:"Wartime constraints; CEC preparing" },
+  { name:"United Kingdom",          iso_num:"826", fh_status:"Free",         fh_score:92, fh_trend:"No change", q:["Yes","Yes","Yes","Yes","Yes"], notes:"EC + Ofcom; minority-language gap" },
+];
+
+const Q_LABELS = [
+  "Election authority AI guidance",
+  "Media literacy mechanisms",
+  "Independent fact-checking",
+  "Platform engagement",
+  "Transparency mechanisms",
+];
+
+// Elections in window (only upcoming/in-scope shown by default; past for reference omitted from timeline)
+const ELECTIONS = [
+  { date:"2026-05-24", country:"Cyprus",                  title:"House of Representatives (parliamentary)",        level:"National",    status:"Scheduled",          context:"Proportional, 56 seats. AI-deepfake risks rising; Greek/Turkish-language media split." },
+  { date:"2026-06-07", country:"Armenia",                 title:"National Assembly (parliamentary)",                level:"National",    status:"Scheduled",          context:"First post-2018 test of democracy under PM Pashinyan. Russian-linked disinfo flagged." },
+  { date:"2026-06-30", country:"Spain",                   title:"Andalusia regional parliament",                    level:"Subnational", status:"Scheduled",          context:"Largest Spanish autonomous community. Vox / PP / PSOE three-way." },
+  { date:"2026-08-30", country:"Estonia",                 title:"Presidential (indirect, Riigikogu)",               level:"National",    status:"Scheduled",          context:"President elected by parliament. High cyber-threat posture toward Russia." },
+  { date:"2026-09-06", country:"Germany",                 title:"Saxony-Anhalt state (Landtag) election",           level:"Subnational", status:"Scheduled",          context:"AfD strong in east; Storm-1516 Russian-linked AI deepfake network active." },
+  { date:"2026-09-13", country:"Sweden",                  title:"Riksdag (parliamentary)",                          level:"National",    status:"Scheduled",          context:"Fixed-term every 4 years. PSYDEF agency monitors AI influence ops." },
+  { date:"2026-09-20", country:"Germany",                 title:"Berlin state (Abgeordnetenhaus) election",         level:"Subnational", status:"Scheduled",          context:"City-state. Repeat-election aftermath. Test of Merz government." },
+  { date:"2026-09-20", country:"Germany",                 title:"Mecklenburg-Vorpommern state election",            level:"Subnational", status:"Scheduled",          context:"AfD-leading polls; Russian-linked disinfo precedent." },
+  { date:"2026-10-03", country:"Latvia",                  title:"Saeima (parliamentary)",                           level:"National",    status:"Expected (by date)", context:"4-year term ends Oct 2026. Russian-speaking minority dual info-space." },
+  { date:"2026-10-04", country:"Bosnia and Herzegovina",  title:"General (Presidency + Parl. Assembly + entities)", level:"National",    status:"Expected (by date)", context:"4-year cycle since 2022. High historical disinformation risk." },
+  { date:"2026-11-01", country:"Italy",                   title:"Regional elections (multiple regions)",            level:"Subnational", status:"Scheduled",          context:"Veneto, Campania, Puglia, Tuscany, Marche — staggered Q3/Q4 2026." },
+  { date:"2026-11-15", country:"Bulgaria",                title:"Presidential",                                     level:"National",    status:"Scheduled",          context:"Radev term-limited. Institutional fatigue + AI-driven narratives noted." },
+  { date:"2027-02-13", country:"Germany",                 title:"Federal Presidential election (Bundesversammlung)",level:"National",    status:"Scheduled",          context:"Indirect election by Federal Convention. Ceremonial but symbolic." },
+  { date:"2027-03-01", country:"Estonia",                 title:"Riigikogu (parliamentary)",                         level:"National",    status:"Scheduled",          context:"4-year fixed term. Heavy e-voting infrastructure; deepfake threat surface." },
+  { date:"2027-03-15", country:"Andorra",                 title:"General Council (parliamentary)",                   level:"National",    status:"Scheduled",          context:"Small electorate (~30k voters). Catalan-language ecosystem." },
+  { date:"2027-03-30", country:"Malta",                   title:"House of Representatives",                          level:"National",    status:"Expected (by date)", context:"Two-party PL/PN. Maltese-language LLM coverage limited." },
+  { date:"2027-04-11", country:"France",                  title:"Presidential election (round 1)",                   level:"National",    status:"Scheduled",          context:"Round 2 expected 25 Apr. Macron term-limited. Significant AI-deepfake exposure." },
+  { date:"2027-04-11", country:"Finland",                 title:"Eduskunta (parliamentary)",                         level:"National",    status:"Scheduled",          context:"Fixed 4-year term. NATO context; Russia-linked disinfo flagged by Supo." },
+  { date:"2027-05-06", country:"United Kingdom",          title:"English local elections + select metro mayors",     level:"Subnational", status:"Scheduled",          context:"Post-Online Safety Act enforcement; Ofcom AI guidance active." },
+  { date:"2027-05-15", country:"Spain",                   title:"Castile-La Mancha, Madrid, regional rolling",       level:"Subnational", status:"Expected (by date)", context:"Many autonomous communities sync regional + municipal in May 2027." },
+  { date:"2027-05-15", country:"Albania",                 title:"Local elections",                                   level:"Subnational", status:"Expected (by date)", context:"Local cycle every 4 years." },
+  { date:"2027-06-13", country:"France",                  title:"Legislative elections (Assemblée Nationale)",       level:"National",    status:"Scheduled",          context:"Two-round constituency. AI-content saturation expected." },
+  { date:"2027-06-15", country:"Montenegro",              title:"Parliamentary",                                     level:"National",    status:"Scheduled",          context:"Pro-Western vs. pro-Serbian/Russian forces. Media polarization." },
+  { date:"2027-07-01", country:"Greece",                  title:"Hellenic Parliament",                               level:"National",    status:"Expected (by date)", context:"ND government majority. Limited Greek-language LLM coverage." },
+  { date:"2027-09-15", country:"Slovakia",                title:"National Council (parliamentary)",                  level:"National",    status:"Expected (by date)", context:"Fico government term. 2023 cycle had deepfake audio (Šimečka)." },
+  { date:"2027-09-15", country:"Norway",                  title:"Municipal &amp; county elections",                  level:"Subnational", status:"Scheduled",          context:"Fixed 4-year cycle. Sami Parliament also up." },
+  { date:"2027-09-30", country:"Italy",                   title:"General election (Chamber + Senate)",               level:"National",    status:"Expected (by date)", context:"Meloni government term expires. National AI Law 2025 with election-specific provisions." },
+  { date:"2027-10-15", country:"Poland",                  title:"Sejm + Senate (parliamentary)",                     level:"National",    status:"Scheduled",          context:"Tusk coalition vs. PiS. 2023 cycle had Tusk deepfake audio." },
+  { date:"2027-10-24", country:"Switzerland",             title:"Federal (National Council + Council of States)",    level:"National",    status:"Scheduled",          context:"Fixed 4-year cycle. Strong direct-democracy info ecosystem." },
+  { date:"2027-10-30", country:"Slovenia",                title:"Presidential",                                      level:"National",    status:"Scheduled",          context:"Ceremonial. Pirc Musar incumbent." },
+  { date:"2027-12-01", country:"Serbia",                  title:"Parliamentary",                                     level:"National",    status:"Expected (by date)", context:"Vučić/SNS dominance contested by 2024-25 protests. High AI-misinfo risk." },
+  { date:"2027-12-01", country:"Serbia",                  title:"Presidential",                                      level:"National",    status:"Scheduled",          context:"Vučić term-limited. Major succession test." },
+  { date:"2027-12-15", country:"Spain",                   title:"Cortes Generales (general election)",               level:"National",    status:"Expected (by date)", context:"Sánchez minority government term ends Dec 2027. AESIA active." },
+];
+
+// ====================================================================
+// DERIVED + UTILITIES
+// ====================================================================
+const SCORE_MAP = { Yes: 2, Partial: 1, No: 0, Unknown: 0 };
+function scoreOf(c) { return c.q.reduce((a, v) => a + (SCORE_MAP[v] ?? 0), 0); }
+function tierOf(s) {
+  if (s >= 8) return "Strong";
+  if (s >= 5) return "Moderate";
+  if (s >= 2) return "Weak";
+  return "VeryWeak";
+}
+function tierLabel(t) {
+  return { Strong: "Strong", Moderate: "Moderate", Weak: "Weak", VeryWeak: "Very weak", Unknown: "Unknown" }[t] ?? t;
+}
+function fhPillClass(s) { return s.replace(/\s+/g, ""); }
+
+const countryByName = Object.fromEntries(COUNTRIES.map(c => [c.name, c]));
+const countryByIsoNum = Object.fromEntries(COUNTRIES.map(c => [parseInt(c.iso_num, 10), c]));
+COUNTRIES.forEach(c => {
+  c.score = scoreOf(c);
+  c.tier = tierOf(c.score);
+  c.elections = ELECTIONS.filter(e => e.country === c.name).length;
+});
+
+// Topojson names can drift from our names — map by id (numeric ISO) primarily,
+// fallback by name aliases
+const NAME_ALIASES = {
+  "Czechia": "Czech Republic",
+  "Macedonia": "North Macedonia",
+  "Turkey": "Türkiye",
+  "Bosnia and Herz.": "Bosnia and Herzegovina",
+  "Republic of Serbia": "Serbia",
+};
+
+// ====================================================================
+// STATE
+// ====================================================================
+const state = {
+  filterCountry: "",
+  filterLevel: "",
+  filterStatus: "",
+  selectedCountry: null,
+  sortBy: "score",
+  sortAsc: false,
+};
+
+// ====================================================================
+// RENDER: KPIs
+// ====================================================================
+function renderKPIs() {
+  document.getElementById("kpi-elections").textContent = ELECTIONS.length;
+  const countriesWith = new Set(ELECTIONS.map(e => e.country));
+  document.getElementById("kpi-countries").textContent = countriesWith.size;
+  document.getElementById("kpi-free").textContent =
+    COUNTRIES.filter(c => c.fh_status === "Free").length;
+  document.getElementById("kpi-strong").textContent =
+    COUNTRIES.filter(c => c.tier === "Strong").length;
+}
+
+// ====================================================================
+// RENDER: TIMELINE
+// ====================================================================
+const monthFmt = new Intl.DateTimeFormat("en-GB", { year: "numeric", month: "long" });
+const dayFmt = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short" });
+
+function filteredElections() {
+  return ELECTIONS.filter(e => {
+    if (state.filterCountry && e.country !== state.filterCountry) return false;
+    if (state.filterLevel && e.level !== state.filterLevel) return false;
+    if (state.filterStatus && e.status !== state.filterStatus) return false;
+    return true;
+  });
+}
+
+function renderTimeline() {
+  const root = document.getElementById("timeline");
+  const list = filteredElections().slice().sort((a, b) => a.date.localeCompare(b.date));
+  if (list.length === 0) {
+    root.innerHTML = '<p style="color: var(--ink-mute); font-style: italic;">No elections match the current filters.</p>';
+    return;
+  }
+  const groups = {};
+  list.forEach(e => {
+    const d = new Date(e.date + "T00:00:00");
+    const key = monthFmt.format(d);
+    (groups[key] ||= []).push(e);
+  });
+  root.innerHTML = Object.entries(groups).map(([month, items]) => `
+    <div class="month-group">
+      <div class="month-label">${month}</div>
+      ${items.map(e => {
+        const d = new Date(e.date + "T00:00:00");
+        const isExact = e.status === "Scheduled";
+        const isHighlight = state.selectedCountry === e.country;
+        const statusClass = e.status === "Scheduled" ? "scheduled"
+                          : e.status.startsWith("Expected") ? "expected"
+                          : e.status.startsWith("Postponed") ? "postponed"
+                          : "past";
+        return `
+          <div class="election-row ${isHighlight ? "highlight" : ""}" data-country="${e.country}">
+            <div class="date">${isExact ? dayFmt.format(d) : "—"}</div>
+            <div class="title"><strong>${e.country}</strong> · ${e.title}<span class="context">${e.context}</span></div>
+            <div class="level"><span class="pill ${e.level.toLowerCase()}">${e.level}</span></div>
+            <div class="status"><span class="pill ${statusClass}">${e.status.replace(" (by date)", "")}</span></div>
+          </div>`;
+      }).join("")}
+    </div>
+  `).join("");
+  // click rows to select country
+  root.querySelectorAll(".election-row").forEach(el => {
+    el.addEventListener("click", () => selectCountry(el.dataset.country));
+  });
+}
+
+// ====================================================================
+// RENDER: FILTERS
+// ====================================================================
+function renderFilters() {
+  const sel = document.getElementById("filter-country");
+  const countries = Array.from(new Set(ELECTIONS.map(e => e.country))).sort();
+  sel.innerHTML = '<option value="">All countries</option>' +
+    countries.map(c => `<option value="${c}" ${state.filterCountry === c ? "selected" : ""}>${c}</option>`).join("");
+  document.getElementById("filter-level").value = state.filterLevel;
+  document.getElementById("filter-status").value = state.filterStatus;
+
+  const banner = document.getElementById("filter-banner");
+  if (state.selectedCountry) {
+    banner.classList.add("visible");
+    banner.innerHTML = `Showing data for <strong>${state.selectedCountry}</strong>. <a href="#" id="banner-clear" style="color: var(--accent);">Clear</a>`;
+    document.getElementById("banner-clear").addEventListener("click", e => {
+      e.preventDefault();
+      clearSelection();
+    });
+  } else {
+    banner.classList.remove("visible");
+    banner.innerHTML = "";
+  }
+}
+
+// ====================================================================
+// RENDER: MAP
+// ====================================================================
+const MAP_W = 760, MAP_H = 580;
+let mapPaths = null;
+const colorScale = d3.scaleLinear()
+  .domain([0, 5, 10])
+  .range(["#D96A6A", "#E8C66B", "#5BA77F"])
+  .clamp(true);
+
+function renderLegend() {
+  const el = document.getElementById("legend-scale");
+  const steps = 12;
+  el.innerHTML = "";
+  for (let i = 0; i < steps; i++) {
+    const s = document.createElement("span");
+    s.style.background = colorScale((i / (steps - 1)) * 10);
+    el.appendChild(s);
+  }
+}
+
+async function renderMap() {
+  const svg = d3.select("#europe-map");
+  const tooltip = d3.select("#tooltip");
+  // Europe-focused Mercator projection
+  const projection = d3.geoMercator()
+    .center([15, 54])
+    .scale(700)
+    .translate([MAP_W / 2, MAP_H / 2]);
+  const path = d3.geoPath().projection(projection);
+
+  // Fetch world topojson once
+  const topo = await fetch("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json").then(r => r.json());
+  const countries = topojson.feature(topo, topo.objects.countries).features;
+
+  mapPaths = svg.selectAll("path.country")
+    .data(countries)
+    .enter()
+    .append("path")
+    .attr("class", d => {
+      const c = countryByIsoNum[parseInt(d.id, 10)] || countryByName[NAME_ALIASES[d.properties.name] || d.properties.name];
+      return "country" + (c ? "" : " outside");
+    })
+    .attr("d", path)
+    .attr("fill", d => {
+      const c = countryByIsoNum[parseInt(d.id, 10)] || countryByName[NAME_ALIASES[d.properties.name] || d.properties.name];
+      return c ? colorScale(c.score) : "#EDE9DF";
+    })
+    .on("mouseover", (event, d) => {
+      const c = countryByIsoNum[parseInt(d.id, 10)] || countryByName[NAME_ALIASES[d.properties.name] || d.properties.name];
+      if (!c) return;
+      tooltip.style("opacity", 1).html(`
+        <strong>${c.name}</strong>
+        Readiness ${c.score}/10 · ${tierLabel(c.tier)}<br>
+        <span class="meta">Freedom House: ${c.fh_status} (${c.fh_score}/100)</span>
+      `);
+    })
+    .on("mousemove", (event) => {
+      tooltip.style("left", (event.pageX + 12) + "px")
+             .style("top",  (event.pageY + 12) + "px");
+    })
+    .on("mouseout", () => tooltip.style("opacity", 0))
+    .on("click", (event, d) => {
+      const c = countryByIsoNum[parseInt(d.id, 10)] || countryByName[NAME_ALIASES[d.properties.name] || d.properties.name];
+      if (c) selectCountry(c.name);
+    });
+  updateMapSelection();
+}
+
+function updateMapSelection() {
+  if (!mapPaths) return;
+  mapPaths.classed("selected", d => {
+    const c = countryByIsoNum[parseInt(d.id, 10)] || countryByName[NAME_ALIASES[d.properties.name] || d.properties.name];
+    return c && c.name === state.selectedCountry;
+  });
+}
+
+// ====================================================================
+// RENDER: COUNTRY PANEL
+// ====================================================================
+function renderCountryPanel() {
+  const panel = document.getElementById("country-panel");
+  if (!state.selectedCountry) {
+    panel.className = "country-panel empty";
+    panel.innerHTML = "<p>Click a country on the map or a row in the table to see its profile here.</p>";
+    return;
+  }
+  const c = countryByName[state.selectedCountry];
+  if (!c) return;
+  const upcoming = ELECTIONS.filter(e => e.country === c.name)
+    .sort((a, b) => a.date.localeCompare(b.date));
+  panel.className = "country-panel";
+  panel.innerHTML = `
+    <h3>${c.name}</h3>
+    <div class="fh-line">
+      <span class="fh-status">Freedom House: ${c.fh_status}</span> · ${c.fh_score}/100
+      ${c.fh_trend !== "No change" ? ` · <em>${c.fh_trend}</em>` : ""}
+    </div>
+    <h4>Readiness</h4>
+    <div><span class="score-big">${c.score}<span style="font-size:16px;color:var(--ink-mute);">/10</span></span>
+      <span class="tier ${c.tier}">${tierLabel(c.tier)}</span></div>
+    ${c.q.map((v, i) => `
+      <div class="qrow"><span class="q">${i + 1}. ${Q_LABELS[i]}</span><span class="a ${v}">${v}</span></div>
+    `).join("")}
+    ${c.notes ? `<h4>Notes</h4><div style="font-size:13px;color:var(--ink-soft);">${c.notes}</div>` : ""}
+    <h4>Elections in scope (${upcoming.length})</h4>
+    ${upcoming.length === 0
+      ? '<div style="font-size:13px;color:var(--ink-mute);">None between now and Dec 2027.</div>'
+      : upcoming.map(e => `<div style="font-size:13px;margin-bottom:6px;"><strong>${dayFmt.format(new Date(e.date + "T00:00:00"))} ${new Date(e.date).getFullYear()}</strong> · ${e.title}</div>`).join("")}
+  `;
+}
+
+// ====================================================================
+// RENDER: RANKING TABLE
+// ====================================================================
+function renderRanking() {
+  const tbody = document.querySelector("#ranking-table tbody");
+  const sorted = COUNTRIES.slice().sort((a, b) => {
+    let av, bv;
+    switch (state.sortBy) {
+      case "name":     av = a.name; bv = b.name; break;
+      case "fh_score": av = a.fh_score; bv = b.fh_score; break;
+      case "elections":av = a.elections; bv = b.elections; break;
+      case "tier":     av = a.score; bv = b.score; break;  // sort tier by underlying score
+      case "score":
+      default:         av = a.score; bv = b.score; break;
+    }
+    if (av < bv) return state.sortAsc ? -1 : 1;
+    if (av > bv) return state.sortAsc ? 1 : -1;
+    return a.name.localeCompare(b.name);
+  });
+  tbody.innerHTML = sorted.map(c => `
+    <tr data-country="${c.name}" class="${state.selectedCountry === c.name ? "highlight" : ""}">
+      <td class="country">${c.name}</td>
+      <td><span class="fh-pill ${fhPillClass(c.fh_status)}">${c.fh_status}</span> <span style="color:var(--ink-mute);font-size:12px;">${c.fh_score}</span></td>
+      <td class="num">
+        <span class="score-bar"><span class="fill" style="width:${(c.score / 10) * 100}%"></span></span>
+        ${c.score}/10
+      </td>
+      <td><span class="tier ${c.tier}">${tierLabel(c.tier)}</span></td>
+      <td class="num">${c.elections}</td>
+    </tr>
+  `).join("");
+  tbody.querySelectorAll("tr").forEach(tr => {
+    tr.addEventListener("click", () => selectCountry(tr.dataset.country));
+  });
+  // header sort classes
+  document.querySelectorAll("#ranking-table th").forEach(th => {
+    th.classList.toggle("sortcol", th.dataset.sort === state.sortBy);
+    th.classList.toggle("asc", th.dataset.sort === state.sortBy && state.sortAsc);
+  });
+}
+
+// ====================================================================
+// INTERACTIONS
+// ====================================================================
+function selectCountry(name) {
+  if (state.selectedCountry === name) {
+    clearSelection();
+    return;
+  }
+  state.selectedCountry = name;
+  state.filterCountry = name;
+  renderAll();
+}
+function clearSelection() {
+  state.selectedCountry = null;
+  state.filterCountry = "";
+  renderAll();
+}
+function renderAll() {
+  renderFilters();
+  renderTimeline();
+  updateMapSelection();
+  renderCountryPanel();
+  renderRanking();
+}
+
+document.getElementById("filter-country").addEventListener("change", e => {
+  state.filterCountry = e.target.value;
+  state.selectedCountry = e.target.value || null;
+  renderAll();
+});
+document.getElementById("filter-level").addEventListener("change", e => {
+  state.filterLevel = e.target.value;
+  renderTimeline();
+});
+document.getElementById("filter-status").addEventListener("change", e => {
+  state.filterStatus = e.target.value;
+  renderTimeline();
+});
+document.getElementById("clear-filters").addEventListener("click", () => {
+  state.filterCountry = "";
+  state.filterLevel = "";
+  state.filterStatus = "";
+  state.selectedCountry = null;
+  renderAll();
+});
+document.querySelectorAll("#ranking-table th").forEach(th => {
+  th.addEventListener("click", () => {
+    const col = th.dataset.sort;
+    if (state.sortBy === col) {
+      state.sortAsc = !state.sortAsc;
+    } else {
+      state.sortBy = col;
+      state.sortAsc = col === "name";
+    }
+    renderRanking();
+  });
+});
+
+// ====================================================================
+// BOOT
+// ====================================================================
+renderKPIs();
+renderLegend();
+renderAll();
+renderMap();
+</script>
+</body>
+</html>
